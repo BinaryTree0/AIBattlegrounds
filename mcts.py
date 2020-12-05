@@ -17,10 +17,10 @@ def randomPolicy(state):
 
 class treeNode():
     def __init__(self, state, parent):
-        if parent==0:
+        if parent==None:
             self.depth = 0
         else:
-            self.depth += 1
+            self.depth = parent.depth + 1
         self.state = state
         self.isTerminal = state.isTerminal(depth)
         self.isFullyExpanded = self.isTerminal
