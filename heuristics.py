@@ -7,10 +7,10 @@ def calculate_goods(resources_list):
     #TODO vuna drvo zito glina
 
 
-def initial_state_heuristic(map): # intersections su integeri
+def initial_state_heuristic(): # intersections su integeri
     intersection_fitnesses = []
-    for intersection in map.viable_intersections():
-        intersection_fitnesses.append((intersection, calculate_goods(map.get_resources(intersection))))
+    for intersection in viable_intersections():
+        intersection_fitnesses.append((intersection, calculate_goods(get_resources(intersection))))
 
     sorted_intersection_fitnesses = sorted(intersection_fitnesses, key=itemgetter(1))
 
@@ -25,9 +25,11 @@ def initial_state_heuristic(map): # intersections su integeri
             current_best_neighbour = neighbour
 
     return best_city, current_best_neighbour # ako smo drugi ako smo prvi uzmemo samo prvi
+    #TODO cesta
 
 
-def terminate_fitness(myresources, mycities, myroads, opponentresources, opponentcities, opponentroads):  # 0 mi 1 opponent
+def terminate_fitness(attrs):  # 0 mi 1 opponent
+    myresources, mycities, myroads, opponentresources, opponentcities, opponentroads = attrs[0], attrs[1], attrs[2], attrs[3], attrs[4], attrs[5]
 
     my_cities_sum = 0
     for city in mycities.keys():
