@@ -10,7 +10,7 @@ class UCTNode:
         game_state,
         move,
         parent=None,
-        max_depth = 7,
+        max_depth = 6,
         ):
         self.game_state = game_state
         self.move = move
@@ -19,7 +19,7 @@ class UCTNode:
         self.parent = parent  # Optional[UCTNode]
         self.children = {}  # Dict[move, UCTNode]
         self.child_priors = np.zeros([9], dtype=np.float32)
-        self.child_total_value = np.random.random([9])
+        self.child_total_value = np.zeros([9], dtype=np.float32)
         self.child_number_visits = np.zeros([9], dtype=np.float32)
 
     @property
@@ -45,7 +45,7 @@ class UCTNode:
         return np.sqrt(global_time/(self.child_number_visits+1))
 
     def best_child(self):
-        return np.argmax(self.child_Q() + 0.15 * self.child_U())
+        return np.argmax(self.child_Q() + 0.1 * self.child_U())
 
     def select_leaf(self):
         current = self
@@ -66,7 +66,7 @@ class UCTNode:
         current = self
         while current.parent is not None:
             current.number_visits += 1
-            current.total_value += value_estimate*self.game_state.to_play
+            current.total_value += value_estimate/self.depth
             current = current.parent
 
 
@@ -82,19 +82,25 @@ class DummyNode(object):
 def UCT_search(game_state, num_reads):
     global global_time
     root = UCTNode(game_state, move=None, parent=DummyNode())
+    print(root.child_total_value)
     for i in range(num_reads):
         global_time = np.log(np.full((9), i+1))
         leaf = root.select_leaf()
-        (child_priors, value_estimate) = Heuristic.evaluate(leaf.game_state)
+        child_priors = Heuristic.priors(leaf.game_state)
         leaf.expand(child_priors)
+        value_estimate = Heuristic.reward(leaf.game_state)
         leaf.backup(value_estimate)
+    print(root.child_total_value)
     return root
 
 
 class Heuristic:
     @classmethod
-    def evaluate(self, game_state):
-        return (np.random.random([9]), np.random.random())
+    def priors(self, game_state):
+        return np.random.random([9])
+    @classmethod
+    def reward(self, game_state):
+        return np.random.random()-0.5
 
 
 class GameState:
@@ -115,7 +121,7 @@ print("Took %s sec to run %s times" % (tock - tick, num_reads))
 import resource
 print("Consumed %sB memory" % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 curr = root
-while curr.depth<=6:
+while curr.depth<=5:
     move = np.argmax(curr.child_number_visits)
     print(curr.child_number_visits)
     curr = curr.children[move]
