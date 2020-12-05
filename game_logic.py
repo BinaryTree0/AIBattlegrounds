@@ -2,6 +2,7 @@ import requests
 import random
 import time
 import copy
+from .botrat import UCT_search
 
 _gameId = None
 _playerIndex = None
@@ -41,8 +42,8 @@ def get_neighbours(intersection):
     return list(roads[intersection].keys())
 
 
-# resources, cities, length_roads
-def play(moves, playerId):
+# resources, cities, playerIdplayerIdlength_roads
+def play(moves):
     global my_resources, opponent_resources, my_cities, opponent_cities, my_roads, opponent_roads, my_position, opponent_position
     my_resources_copy = copy(my_resources)
     opponent_resources_copy = copy(opponent_resources)
@@ -53,8 +54,14 @@ def play(moves, playerId):
     my_position_copy = my_position
     opponent_position_copy = opponent_position
 
+    id = 1
+
     for move in moves:
-        update_copy(move, playerId, my_resources_copy, opponent_resources_copy, my_cities_copy, opponent_cities_copy, my_roads_copy, opponent_roads_copy, my_position_copy, opponent_position_copy)
+        update_copy(move, id, my_resources_copy, opponent_resources_copy, my_cities_copy, opponent_cities_copy, my_roads_copy, opponent_roads_copy, my_position_copy, opponent_position_copy)
+        if id == 1:
+            id = 2
+        else:
+            id = 1
 
     return my_resources_copy.values(), my_cities_copy, len(list(my_roads_copy)), opponent_resources_copy.values(), opponent_cities_copy, len(list(opponent_roads_copy))
 
@@ -287,10 +294,9 @@ def run():
         print(my_roads)
         # Other player made their move - we send our move again
         if counter > 0:
-            potezi = possible_moves(1, my_position, roads, intersections, my_resources, my_cities, opponent_cities)
-            x = random.randint(0,len(potezi)-1)
-            actions.append(potezi[x])
-            time.sleep(0.5)
+            root = UCT_search(20000)
+            potez = np.argmax(root.child_number_visits)
+            actions.append(potezi[potez])
         counter = counter + 1
 
 

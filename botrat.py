@@ -1,10 +1,8 @@
 import collections
 import numpy as np
 import math
-from game_logic import get_states
-from heuristics import initial_state_heuristic
-
-features = 9
+from game_logic import play
+from heuristics import terminate_fitness
 
 class UCTNode:
 
@@ -21,12 +19,12 @@ class UCTNode:
         self.max_depth = max_depth
         self.parent = parent  # Optional[UCTNode]
         self.children = {}  # Dict[move, UCTNode]
-        self.child_priors = np.zeros([features], dtype=np.float32)
-        self.child_total_value = np.zeros([features], dtype=np.float32)
+        self.child_priors = np.zeros([9], dtype=np.float32)
+        self.child_total_value = np.zeros([9], dtype=np.float32)
         viable_moves = Heuristic.viable_moves(game_state)
         for i in viable_moves:
             self.child_total_value[i] = -50000
-        self.child_number_visits = np.zeros([features], dtype=np.float32)
+        self.child_number_visits = np.zeros([9], dtype=np.float32)
         if self.depth == max_depth:
             self.reward = Heuristic.reward(self.game_state)
         else:
@@ -92,7 +90,7 @@ def UCT_search(num_reads):
     global global_time
     root = UCTNode([], move=None, parent=DummyNode())
     for i in range(num_reads):
-        global_time = np.log(np.full((features), i+1))
+        global_time = np.log(np.full((9), i+1))
         leaf = root.select_leaf()
         leaf.backup(leaf.reward)
     return root
@@ -101,30 +99,9 @@ def UCT_search(num_reads):
 class Heuristic:
     @classmethod
     def reward(self, game_state):
-        atrs = get_states(game_state)
+        atrs = play(game_state)
         reward = terminate_fitness(atrs)
         return reward
     @classmethod
     def viable_moves(self, game_state):
         return [0]
-
-
-num_reads = 30000
-import time
-tick = time.time()
-root = UCT_search(num_reads)
-tock = time.time()
-print("Took %s sec to run %s times" % (tock - tick, num_reads))
-import resource
-print("Consumed %sB memory" % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
-curr = root
-while curr.depth<=5:
-    move = np.argmax(curr.child_number_visits)
-    curr = curr.children[move]
-curr = curr.parent
-print(curr.game_state)
-print(root.child_number_visits)
-print(root.child_total_value)
-print("Rewards:",end=" ")
-for i in curr.children.values():
-    print(i.reward,end=", ")

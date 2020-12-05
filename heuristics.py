@@ -23,8 +23,8 @@ def initial_state_heuristic(): # intersections su integeri
         if v > current_best_value:
             current_best_value = v
             current_best_neighbour = neighbour
-    r1 = get_neighbours(best_city)
-    r2 = get_neighbours(current_best_neighbour)
+    r1 = get_neighbours(best_city)[0]
+    r2 = get_neighbours(current_best_neighbour)[0]
     return best_city, r1, current_best_neighbour, r2 # ako smo drugi ako smo prvi uzmemo samo prvi
     #TODO cesta
 
@@ -66,7 +66,3 @@ def terminate_fitness(attrs):  # 0 mi 1 opponent
     p2 = op_cities_sum + op_resources_sum * opkoef + opponentroads / 2
 
     return p1 - p2
-
-
-
-
