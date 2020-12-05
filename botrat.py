@@ -12,7 +12,9 @@ class StateBotrat():
         return self.state.getPossibleActions()
 
     def takeAction(self, action):
-        self.state.takeAction(action)
+        newState = deepcopy(self)
+        newState.takeAction(action)
+        return newState
 
     def isTerminal(self, depth):
         if depth == self.depth:
@@ -20,8 +22,7 @@ class StateBotrat():
         return False
 
     def getReward(self):
-        # only needed for terminal states
-        raise NotImplementedError()
+        return self.state.Wood + self.state.Stone
 
     def __eq__(self, other):
         raise NotImplementedError()
@@ -29,7 +30,7 @@ class StateBotrat():
 
 class ActionBotrat():
     def __eq__(self, other):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __hash__(self):
         raise NotImplementedError()
