@@ -2,6 +2,7 @@ import collections
 import numpy as np
 import math
 
+features = 9
 
 class UCTNode:
 
@@ -18,9 +19,13 @@ class UCTNode:
         self.max_depth = max_depth
         self.parent = parent  # Optional[UCTNode]
         self.children = {}  # Dict[move, UCTNode]
-        self.child_priors = np.zeros([9], dtype=np.float32)
-        self.child_total_value = np.zeros([9], dtype=np.float32)
-        self.child_number_visits = np.zeros([9], dtype=np.float32)
+        self.child_priors = np.zeros([features], dtype=np.float32)
+        self.child_total_value = np.zeros([features], dtype=np.float32)
+        self.child_number_visits = np.zeros([features], dtype=np.float32)
+        if self.depth == max_depth:
+            self.reward = Heuristic.reward(self.game_state)
+        else:
+            self.reward = 0
 
     @property
     def number_visits(self):
@@ -45,7 +50,7 @@ class UCTNode:
         return np.sqrt(global_time/(self.child_number_visits+1))
 
     def best_child(self):
-        return np.argmax(self.child_Q() + 0.1 * self.child_U())
+        return np.argmax(self.child_Q() + 0.08 *  self.child_U())
 
     def select_leaf(self):
         current = self
@@ -82,22 +87,19 @@ class DummyNode(object):
 def UCT_search(game_state, num_reads):
     global global_time
     root = UCTNode(game_state, move=None, parent=DummyNode())
-    print(root.child_total_value)
     for i in range(num_reads):
-        global_time = np.log(np.full((9), i+1))
+        global_time = np.log(np.full((features), i+1))
         leaf = root.select_leaf()
         child_priors = Heuristic.priors(leaf.game_state)
         leaf.expand(child_priors)
-        value_estimate = Heuristic.reward(leaf.game_state)
-        leaf.backup(value_estimate)
-    print(root.child_total_value)
+        leaf.backup(leaf.reward)
     return root
 
 
 class Heuristic:
     @classmethod
     def priors(self, game_state):
-        return np.random.random([9])
+        return np.random.random([features])
     @classmethod
     def reward(self, game_state):
         return np.random.random()-0.5
@@ -122,7 +124,12 @@ import resource
 print("Consumed %sB memory" % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 curr = root
 while curr.depth<=5:
-    move = np.argmax(curr.child_number_visits)
-    print(curr.child_number_visits)
+    move = np.argmax(curr.child_total_value)
     curr = curr.children[move]
-print(curr.depth)
+
+curr = curr.parent
+print(root.child_number_visits)
+print(root.child_total_value)
+print("Rewards:",end=" ")
+for i in curr.children.values():
+    print(i.reward,end=", ")
