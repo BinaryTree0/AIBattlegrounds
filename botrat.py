@@ -1,6 +1,8 @@
 import collections
 import numpy as np
 import math
+from game_logic import get_states
+from heuristics import initial_state_heuristic
 
 features = 9
 
@@ -21,6 +23,9 @@ class UCTNode:
         self.children = {}  # Dict[move, UCTNode]
         self.child_priors = np.zeros([features], dtype=np.float32)
         self.child_total_value = np.zeros([features], dtype=np.float32)
+        viable_moves = Heuristic.viable_moves(game_state)
+        for i in viable_moves:
+            self.child_total_value[i] = -50000
         self.child_number_visits = np.zeros([features], dtype=np.float32)
         if self.depth == max_depth:
             self.reward = Heuristic.reward(self.game_state)
@@ -59,12 +64,11 @@ class UCTNode:
             current = current.maybe_add_child(best_move)
         return current
 
-    def expand(self, child_priors):
-        self.child_priors = child_priors
-
     def maybe_add_child(self, move):
         if move not in self.children:
-            self.children[move] = UCTNode(self.game_state.play(move), move, parent=self)
+            state = self.game_state.copy()
+            state.append(move)
+            self.children[move] = UCTNode(state, move, parent=self)
         return self.children[move]
 
     def backup(self, value_estimate):
@@ -84,50 +88,41 @@ class DummyNode(object):
         self.depth = -1
 
 
-def UCT_search(game_state, num_reads):
+def UCT_search(num_reads):
     global global_time
-    root = UCTNode(game_state, move=None, parent=DummyNode())
+    root = UCTNode([], move=None, parent=DummyNode())
     for i in range(num_reads):
         global_time = np.log(np.full((features), i+1))
         leaf = root.select_leaf()
-        child_priors = Heuristic.priors(leaf.game_state)
-        leaf.expand(child_priors)
         leaf.backup(leaf.reward)
     return root
 
 
 class Heuristic:
     @classmethod
-    def priors(self, game_state):
-        return np.random.random([features])
-    @classmethod
     def reward(self, game_state):
-        return np.random.random()-0.5
+        atrs = get_states(game_state)
+        reward = terminate_fitness(atrs)
+        return reward
+    @classmethod
+    def viable_moves(self, game_state):
+        return [0]
 
 
-class GameState:
-
-    def __init__(self, to_play=1):
-        self.to_play = to_play
-
-    def play(self, move):
-        return GameState(-self.to_play)
-
-
-num_reads = 50000
+num_reads = 30000
 import time
 tick = time.time()
-root = UCT_search(GameState(), num_reads)
+root = UCT_search(num_reads)
 tock = time.time()
 print("Took %s sec to run %s times" % (tock - tick, num_reads))
 import resource
 print("Consumed %sB memory" % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 curr = root
 while curr.depth<=5:
-    move = np.argmax(curr.child_total_value)
+    move = np.argmax(curr.child_number_visits)
     curr = curr.children[move]
-
 curr = curr.parent
+print(curr.game_state)
 print(root.child_number_visits)
 print(root.child_total_value)
 print("Rewards:",end=" ")
