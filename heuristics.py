@@ -3,7 +3,8 @@ from operator import itemgetter
 
 def calculate_goods(resources_list):
     # drvo glina za ceste i grad, drvo i za kretanje
-    return resources_list[2] + resources_list[3] * 2 + resources_list[4] + resources_list[5] * 2 + resources_list[6]
+    return resources_list[2] * 1.5 + resources_list[3] * 2 + resources_list[4] * 1.5 + resources_list[5] * 2 + resources_list[6]
+    #TODO vuna drvo zito glina
 
 
 def initial_state_heuristic(map): # intersections su integeri
@@ -25,48 +26,43 @@ def initial_state_heuristic(map): # intersections su integeri
 
     return best_city, current_best_neighbour # ako smo drugi ako smo prvi uzmemo samo prvi
 
-def terminate_fitness(map,player=0):  # 0 mi 1 opponent
-    if player == 0:
-        resources = map.ownResources()
-        cities = map.ownCities()
-        roads = map.ownRoads() # int
 
-        cities_sum = 0
-        for city in cities.keys():
-            cities_sum += 1.2 * cities[city]
+def terminate_fitness(myresources, mycities, myroads, opponentresources, opponentcities, opponentroads):  # 0 mi 1 opponent
 
-        with_value = resources[2:]
-        koef = 0
-        total_resources = sum(with_value)
-        resources_sum = 0
-        for res in with_value: # bitni res
-            resources_sum += res/400
-            koef += (res/total_resources)/0.25
+    my_cities_sum = 0
+    for city in mycities.keys():
+        my_cities_sum += 1.2 * mycities[city]
 
-        koef = koef / len(with_value)
-    
-        return cities_sum + resources_sum * koef + roads/2
+    with_value = myresources[2:]
+    my_koef = 0
+    my_total_resources = sum(with_value)
+    my_resources_sum = 0
+    for res in with_value: # bitni res
+        my_resources_sum += res/400
+        my_koef += (res/my_total_resources)/0.25
 
-    else:
-        resources = map.opponentResources()
-        cities = map.opponentCities()
-        roads = map.opponentRoads()  # int
+    my_koef = my_koef / len(with_value)
 
-        cities_sum = 0
-        for city in cities.keys():
-            cities_sum += 1.2 * cities[city]
+    p1 =  my_cities_sum + my_resources_sum * my_koef + myroads/2
 
-        with_value = resources[2:]
-        koef = 0
-        total_resources = sum(with_value)
-        resources_sum = 0
-        for res in with_value:  # bitni res
-            resources_sum += res / 400
-            koef += (res / total_resources) / 0.25
 
-        koef = koef / len(with_value)
+    op_cities_sum = 0
+    for city in opponentcities.keys():
+        op_cities_sum += 1.2 * opponentcities[city]
 
-        return cities_sum + resources_sum * koef + roads / 2
+    with_value = opponentresources[2:]
+    opkoef = 0
+    optotal_resources = sum(with_value)
+    op_resources_sum = 0
+    for res in with_value:  # bitni res
+        op_resources_sum += res / 400
+        opkoef += (res / optotal_resources) / 0.25
+
+    opkoef = opkoef / len(with_value)
+
+    p2 = op_cities_sum + op_resources_sum * opkoef + opponentroads / 2
+
+    return p1 - p2
 
 
 
