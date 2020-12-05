@@ -1,6 +1,7 @@
 import requests
 import random
 import time
+import copy
 
 _gameId = None
 _playerIndex = None
@@ -36,6 +37,131 @@ opponent_roads = {}
 first = True
 
 
+def get_neighbours(intersection):
+    return list(roads[intersection].keys())
+
+
+# resources, cities, length_roads
+def play(moves, playerId):
+    global my_resources, opponent_resources, my_cities, opponent_cities, my_roads, opponent_roads, my_position, opponent_position
+    my_resources_copy = copy(my_resources)
+    opponent_resources_copy = copy(opponent_resources)
+    my_cities_copy = copy(my_cities)
+    opponent_cities_copy = copy(opponent_cities)
+    my_roads_copy = copy(my_roads)
+    opponent_roads_copy = copy(opponent_roads)
+    my_position_copy = my_position
+    opponent_position_copy = opponent_position
+
+    for move in moves:
+        update_copy(move, playerId, my_resources_copy, opponent_resources_copy, my_cities_copy, opponent_cities_copy, my_roads_copy, opponent_roads_copy, my_position_copy, opponent_position_copy)
+
+    return my_resources_copy.values(), my_cities_copy, len(list(my_roads_copy)), opponent_resources_copy.values(), opponent_cities_copy, len(list(opponent_roads_copy))
+
+
+def build_town_copy(intersection, playerId, my_cities, opponent_cities):
+    intersection = int(intersection)
+
+    if _playerId == playerId:
+        my_cities[intersection] = 1
+
+    else:
+        opponent_cities[intersection] = 1
+
+
+def upgrade_town_copy(intersection, playerId, my_cities, opponent_cities):
+    global _playerId
+
+    if _playerId == playerId:
+        my_cities[intersection] = 2
+    else:
+        opponent_cities[intersection] = 2
+
+
+def build_road_copy(intersection1, intersection2, playerId, my_roads, opponent_roads):
+    intersection1 = int(intersection1)
+    intersection2 = int(intersection2)
+    playerId = int(playerId)
+    roads[intersection1][intersection2] = playerId
+    roads[intersection2][intersection1] = playerId
+
+    if _playerId == playerId:
+        my_roads[(intersection1, intersection2)] = playerId
+        my_roads[(intersection2, intersection1)] = playerId
+    else:
+        opponent_roads[(intersection1, intersection2)] = playerId
+        opponent_roads[(intersection2, intersection1)] = playerId
+
+
+def update_copy(action, playerId, my_resources, opponent_resources, my_cities, opponent_cities, my_roads, opponent_roads, my_position, opponent_position):
+    if action.startswith("initial"):
+        params = action.split()
+        intersection1 = int(params[1])
+        intersection2 = int(params[2])
+        build_town_copy(intersections, playerId, my_cities, opponent_cities)
+        build_road_copy(intersection1, intersection2, playerId, my_roads, opponent_roads)
+
+        if _playerId == playerId:
+            if my_position is None:
+                my_position = intersection1
+        else:
+            if opponent_position is None:
+                opponent_position = intersection1
+
+    if action.startswith("move"):
+        params = action.split()
+
+        if _playerId == playerId:
+            if int(params[1]) not in roads[my_position] or roads[my_position][int(params[1])] != playerId:
+                my_resources['SHEEP'] -= 50
+                my_resources['WHEAT'] -= 50
+
+            my_position = int(params[1])
+        else:
+            if roads[opponent_position][int(params[1])] != playerId:
+                opponent_resources['SHEEP'] -= 50
+                opponent_resources['WHEAT'] -= 50
+            opponent_position = int(params[1])
+
+    if action.startswith("buildroad"):
+        params = action.split()
+        intersection2 = int(params[1])
+
+        if _playerId == playerId:
+            my_resources['WOOD'] -= 100
+            my_resources['CLAY'] -= 100
+            build_road_copy(my_position, intersection2, playerId, my_roads, opponent_roads)
+        else:
+            opponent_resources['WOOD'] -= 100
+            opponent_resources['CLAY'] -= 100
+            build_road_copy(opponent_position, intersection2, playerId, my_roads, opponent_roads)
+
+    if action.startswith("buildtown"):
+        if _playerId == playerId:
+            my_resources['SHEEP'] -= 100
+            my_resources['WOOD'] -= 100
+            my_resources['WHEAT'] -= 100
+            my_resources['CLAY'] -= 100
+            build_town_copy(my_position, playerId, my_cities, opponent_cities)
+        else:
+            opponent_resources['SHEEP'] -= 100
+            opponent_resources['WOOD'] -= 100
+            opponent_resources['WHEAT'] -= 100
+            opponent_resources['CLAY'] -= 100
+            build_town_copy(opponent_position, playerId, my_cities, opponent_cities)
+
+    if action.startswith("upgradetown"):
+        params = action.split()
+        intersection1 = int(params[1])
+        if _playerId == playerId:
+            my_resources['WHEAT'] -= 200
+            my_resources['IRON'] -= 300
+        else:
+            opponent_resources['WHEAT'] -= 200
+            opponent_resources['IRON'] -= 300
+        build_town_copy(intersection1, playerId, my_cities, opponent_cities)
+
+
 def get_resources(intersection):
     resources = {
         'WATER': 0,
@@ -65,7 +191,7 @@ def get_own_resources():
     return my_resources.values()
 
 
-def get_opponent_cities():
+def get_opponent_resources():
     return opponent_resources.values()
 
 
@@ -73,7 +199,7 @@ def get_own_roads_length():
     return len(list(my_roads))
 
 
-def get_opponent_cities():
+def get_opponent_roads_length():
     return len(list(opponent_roads))
 
 
@@ -88,14 +214,12 @@ def join(playerId, gameId):
     res = get(url + '/train/play?playerID=' + str(playerId) + '&gameID=' + str(gameId))
     return res
 
-
 def update_resources_first():
     global my_resources, opponent_resources, my_cities, opponent_cities, tiles, intersections
 
     for intersection, level in my_cities.items():
         for polje in intersections[intersection]:
             my_resources[tiles[polje][0]] += tiles[polje][1] * level
-
 
 def update_resources():
     global my_resources, opponent_resources, my_cities, opponent_cities, tiles, intersections
@@ -112,7 +236,7 @@ def update_resources():
 def run():
     counter = 0
     global _playerIndex, _playerId, _gameId
-    actions = ["initial 67 68", "initial 42 43", ]
+    actions = ["initial 67 68", "initial 42 43",]
     while True:
         print("my resources:", my_resources)
         print("opponent resources", opponent_resources)
@@ -123,12 +247,12 @@ def run():
         move = None
         # After we send an action - we wait for response
         res = do_action(_playerId, _gameId, actions[counter])
-        # print("my:", actions[counter] + '\n')
-        # print("opponent:", res['result'] + '\n')
+        #print("my:", actions[counter] + '\n')
+        #print("opponent:", res['result'] + '\n')
         print(my_cities)
         print(opponent_cities)
 
-        update(actions[counter], 1)
+        update(actions[counter],1)
 
         if first and counter == 0:
             parts = res['result'].split()
@@ -164,7 +288,7 @@ def run():
         # Other player made their move - we send our move again
         if counter > 0:
             potezi = possible_moves(1, my_position, roads, intersections, my_resources, my_cities, opponent_cities)
-            x = random.randint(0, len(potezi) - 1)
+            x = random.randint(0,len(potezi)-1)
             actions.append(potezi[x])
             time.sleep(0.5)
         counter = counter + 1
@@ -223,8 +347,7 @@ def update(action, playerId):
         params = action.split()
 
         if _playerId == playerId:
-            if my_position in my_roads and int(params[1]) not in my_roads[my_position] or my_position in roads and int(
-                    params[1]) in roads[my_position] and roads[my_position][int(params[1])] != playerId:
+            if my_position in my_roads and int(params[1]) not in my_roads[my_position] or my_position in roads and int(params[1]) in roads[my_position] and roads[my_position][int(params[1])] != playerId:
                 my_resources['SHEEP'] -= 50
                 my_resources['WHEAT'] -= 50
 
@@ -340,8 +463,7 @@ def possible_buildroad_moves(playerId, position, roads, intersections, resources
         # ima li barem jedna nasa u sudjednima od susjeda
         for intersection, ownership in possible_intersections.items():
             for intersection2, ownership2 in possible_intersections.items():
-                if position in roads and intersection in roads[position] and intersection in roads and intersection2 in \
-                        roads[intersection] and roads[intersection][intersection2] == playerId and \
+                if position in roads and intersection in roads[position] and intersection in roads and intersection2 in roads[intersection] and roads[intersection][intersection2] == playerId and \
                         roads[position][intersection] == 0:
                     if intersection in list(opponent_cities.keys()):
                         break
@@ -365,8 +487,7 @@ def possible_buildroad_moves(playerId, position, roads, intersections, resources
                 curr_can_build = False
 
                 for intersection2, ownership2 in possible_intersections.items():
-                    if intersection in roads and intersection2 in roads[
-                        intersection] and intersection2 != position and (
+                    if intersection in roads and intersection2 in roads[intersection] and intersection2 != position and (
                             roads[intersection][intersection2] == playerId or roads[position][intersection] == 0):
                         curr_can_build = True
 
