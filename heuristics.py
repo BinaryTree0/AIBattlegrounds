@@ -23,8 +23,9 @@ def initial_state_heuristic(): # intersections su integeri
         if v > current_best_value:
             current_best_value = v
             current_best_neighbour = neighbour
-
-    return best_city, current_best_neighbour # ako smo drugi ako smo prvi uzmemo samo prvi
+    r1 = get_neighbours(best_city)
+    r2 = get_neighbours(current_best_neighbour)
+    return best_city, r1, current_best_neighbour, r2 # ako smo drugi ako smo prvi uzmemo samo prvi
     #TODO cesta
 
 
